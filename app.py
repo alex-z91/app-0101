@@ -165,6 +165,7 @@ def create_order():
         with conn() as db:
             # O lock serializa as reservas concorrentes; a PK de numbers(number)
             # é a última barreira contra qualquer duplicidade.
+            db.execute('LOCK TABLE orders IN SHARE ROW EXCLUSIVE MODE')
             db.execute('LOCK TABLE numbers IN SHARE ROW EXCLUSIVE MODE')
             cleanup(db, now)
             placeholders = ','.join(['%s'] * len(nums))
