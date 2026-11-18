@@ -75,3 +75,49 @@
   .photo-label b { font-size: 12px; }
   .photo-label small { font-size: 10px; }
 }
+
+
+/* Hero editorial v3 — a prioridade é mostrar o rosto do pai e do Riandro.
+   Em vez de centralizar o retrato vertical, ancoramos o enquadramento no topo. */
+.hero-photo {
+  position:relative;
+  min-height: min(700px, 58vw);
+  overflow:hidden;
+  background:#082d47;
+}
+.hero-photo img {
+  position:absolute;
+  display:block;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:50% 0%;
+}
+.hero-photo::before {
+  background:linear-gradient(to top, rgba(4,31,53,.75), transparent 26%);
+}
+@media (max-width:760px) {
+  .hero-photo {
+    width:100%;
+    height:clamp(360px, 108vw, 505px);
+    min-height:0;
+    overflow:hidden;
+  }
+  .hero-photo img {
+    position:absolute;
+    inset:0;
+    height:100%;
+    width:100%;
+    object-fit:cover;
+    object-position:center top;
+  }
+  .hero-photo::before {
+    background:linear-gradient(to top, rgba(4,31,53,.68), transparent 22%);
+  }
+  .photo-label { left:50%; bottom:12px; }
+}
+@media (max-width:360px) {
+  .hero-photo { height:106vw; }
+  .photo-label { max-width:calc(100% - 20px); }
+}
