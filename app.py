@@ -228,9 +228,9 @@ def upload_receipt(oid):
 
     if data.startswith(b'%PDF-'):
         ext, ctype = '.pdf', 'application/pdf'
-    elif data.startswith(b'\\xff\\xd8\\xff'):
+    elif data.startswith(bytes.fromhex('ffd8ff')):
         ext, ctype = '.jpg', 'image/jpeg'
-    elif data.startswith(b'\\x89PNG\\r\\n\\x1a\\n'):
+    elif data.startswith(bytes.fromhex('89504e470d0a1a0a')):
         ext, ctype = '.png', 'image/png'
     elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
         ext, ctype = '.webp', 'image/webp'
