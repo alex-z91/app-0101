@@ -121,3 +121,16 @@
   .hero-photo { height:106vw; }
   .photo-label { max-width:calc(100% - 20px); }
 }
+
+
+/* Assinatura discreta de autoria da landing */
+.footer-meta { display:flex; flex-direction:column; gap:12px; align-items:flex-end; }
+.footer-meta small { line-height:1.6; }
+.developer-credit { color:#9fb9c7; font-size:11px; }
+.developer-credit a { color:#dceef4; font-weight:650; text-decoration:none; border-bottom:1px solid #638797; padding-bottom:2px; transition:color .2s,border-color .2s; }
+.developer-credit a:hover { color:#24ded8; border-color:#24ded8; }
+.developer-credit a:focus-visible { outline:2px solid #24ded8; outline-offset:4px; }
+@media (max-width:760px) {
+  .footer-meta { align-items:flex-start; margin-top:22px; gap:16px; }
+  .developer-credit { font-size:11px; }
+}
