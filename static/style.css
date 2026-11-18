@@ -134,3 +134,17 @@
   .footer-meta { align-items:flex-start; margin-top:22px; gap:16px; }
   .developer-credit { font-size:11px; }
 }
+
+
+/* Créditos separados: responsabilidade da campanha ≠ desenvolvimento do site */
+.footer-meta { display:flex; flex-direction:column; align-items:flex-end; gap:16px; }
+.footer-organization, .developer-credit { display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.footer-organization > small, .developer-credit > small { color:#9fb9c7; font-size:11px; line-height:1.5; }
+.footer-organization > strong { color:#e8f4f8; font-size:13px; font-weight:650; }
+.footer-organization > a { color:#b7d0dc; font-size:11px; text-decoration:none; }
+.developer-credit > a { color:#dceef4; font-weight:650; font-size:12px; text-decoration:none; border-bottom:1px solid #638797; padding-bottom:2px; }
+.footer-organization > a:hover, .developer-credit > a:hover { color:#24ded8; }
+@media (max-width:760px) {
+ .footer-meta, .footer-organization, .developer-credit { align-items:flex-start; }
+ .footer-meta { gap:18px; margin-top:22px; }
+}
