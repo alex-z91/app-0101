@@ -57,3 +57,21 @@
   .hero-stats small { overflow-wrap: anywhere; }
 }
 @media (prefers-reduced-motion: reduce) { .ticket, .btn { transition: none; } }
+
+
+/* A fotografia original preserva ambos os rostos: Riandro e seu pai. */
+.hero-photo { background: #092f48; isolation: isolate; }
+.hero-photo img { object-fit: contain; object-position: center center; }
+.hero-photo:before {
+  background: linear-gradient(0deg, rgba(5,43,73,.77) 0%, transparent 21%);
+  pointer-events:none;
+}
+.photo-label { left: 50%; transform: translateX(-50%); bottom: 22px; width: max-content; max-width: calc(100% - 28px); }
+@media (max-width:760px) {
+  .hero-photo { min-height: 0; overflow: visible; }
+  .hero-photo img { position: relative; width: 100%; height: auto; display: block; object-fit: contain; }
+  .hero-photo:before { background: linear-gradient(0deg, rgba(5,43,73,.79), transparent 16%); }
+  .photo-label { bottom: 14px; padding: 10px 13px; border-radius: 12px; }
+  .photo-label b { font-size: 12px; }
+  .photo-label small { font-size: 10px; }
+}
