@@ -32,6 +32,19 @@ body{background:var(--adm-bg);color:var(--adm-ink)}
 .order-proof a{color:#078d9e;font-weight:700}
 .admin-empty{background:#fff;border:1px dashed #cbdde3;border-radius:15px;padding:35px 18px;text-align:center;color:var(--adm-muted);font-size:13px}
 .admin-note{font-size:11px;color:var(--adm-muted);line-height:1.6;margin:18px 2px}
+/* Confirmação centralizada para ações de remoção */
+.remove-modal{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(8,29,39,.58);backdrop-filter:blur(4px)}
+.remove-modal.is-open{display:flex}
+.remove-dialog{width:min(100%,420px);background:#fff;border:1px solid #e1ebef;border-radius:18px;padding:25px;box-shadow:0 24px 80px #061c2a40;text-align:center;animation:modal-in .16s ease-out}
+.remove-dialog .modal-icon{width:48px;height:48px;margin:0 auto 14px;border-radius:15px;display:grid;place-items:center;background:#fff0ef;color:#a43d39;font-size:22px;font-weight:800}
+.remove-dialog h2{margin:0 0 9px;font-size:19px;letter-spacing:-.03em;color:var(--adm-ink)}
+.remove-dialog p{margin:0;color:#647985;font-size:13px;line-height:1.6}
+.remove-dialog-actions{display:flex;gap:9px;margin-top:22px}
+.remove-dialog-actions button{flex:1;min-height:46px;border:0;border-radius:10px;font:700 13px Inter,sans-serif;cursor:pointer}
+.remove-dialog-actions .keep{background:#edf3f5;color:#34515f}
+.remove-dialog-actions .confirm-remove{background:#b8423d;color:#fff}
+@keyframes modal-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:480px){.remove-dialog{padding:22px 18px}.remove-dialog-actions{flex-direction:column-reverse}}
 @media(max-width:600px){
  .admin-wrap{padding:16px 12px 28px}
  .admin-head{align-items:flex-start;margin-bottom:16px}
@@ -84,7 +97,7 @@ body{background:var(--adm-bg);color:var(--adm-ink)}
    <form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/checkin"><button class="admin-btn dark" type="submit">Registrar check-in</button></form>
   {% endif %}
   {% if o.status != 'paid' %}
-   <form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/remove"><button class="admin-btn red" type="submit" onclick="return confirm('Remover este pedido da lista? Se ainda ocupar números, eles serão liberados. O histórico de auditoria será preservado.')">Remover</button></form>
+   <form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/remove"><button class="admin-btn red" type="submit" >Remover</button></form>
   {% endif %}
  </div>
 </article>
@@ -94,7 +107,22 @@ body{background:var(--adm-bg);color:var(--adm-ink)}
 </section>
 <p class="admin-note">Comprovantes são privados. Remover oculta o pedido da lista, preserva a auditoria e libera os números quando o pagamento ainda não foi confirmado. Pedidos pagos não podem ser removidos.</p>
 </main>
+<div class="remove-modal" id="removeModal" aria-hidden="true">
+ <section class="remove-dialog" role="dialog" aria-modal="true" aria-labelledby="removeTitle" aria-describedby="removeDescription">
+  <div class="modal-icon" aria-hidden="true">!</div>
+  <h2 id="removeTitle">Remover este pedido da lista?</h2>
+  <p id="removeDescription">Se ainda ocupar números, eles serão liberados. O histórico de auditoria será preservado.</p>
+  <div class="remove-dialog-actions"><button class="keep" type="button" id="keepOrder">Manter pedido</button><button class="confirm-remove" type="button" id="confirmRemove">Remover pedido</button></div>
+ </section>
+</div>
 <script>
 for(const f of document.querySelectorAll('.js-csrf')){const i=document.createElement('input');i.type='hidden';i.name='csrf';i.value='{{csrf}}';f.append(i);}
+const removeModal=document.getElementById('removeModal');let pendingRemoval=null;
+document.querySelectorAll('form[action$="/remove"]').forEach(form=>form.addEventListener('submit',event=>{event.preventDefault();pendingRemoval=form;removeModal.classList.add('is-open');removeModal.setAttribute('aria-hidden','false');document.getElementById('keepOrder').focus();}));
+function closeRemoveModal(){removeModal.classList.remove('is-open');removeModal.setAttribute('aria-hidden','true');pendingRemoval=null;}
+document.getElementById('keepOrder').addEventListener('click',closeRemoveModal);
+document.getElementById('confirmRemove').addEventListener('click',()=>{if(pendingRemoval)pendingRemoval.submit();});
+removeModal.addEventListener('click',event=>{if(event.target===removeModal)closeRemoveModal();});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&removeModal.classList.contains('is-open'))closeRemoveModal();});
 </script>
 </body></html>
