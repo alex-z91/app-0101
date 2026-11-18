@@ -85,9 +85,14 @@ def create_order():
         if existing:
             db.rollback();return jsonify(error='Alguns números acabaram de ser reservados. Atualize a cartela.',unavailable=[r['number'] for r in existing]),409
         db.execute('INSERT INTO orders(id,token,name,phone,numbers,amount,status,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?)',(oid,token,name,phone,','.join(map(str,nums)),len(nums)*2000,'reserved',now,now+RESERVATION_SECONDS))
+        # A chave primaria de numbers(number) impede duplicidade no banco.
+        # BEGIN IMMEDIATE serializa reservas concorrentes antes da verificacao.
         db.executemany('INSERT INTO numbers(number,order_id) VALUES(?,?)',[(n,oid) for n in nums])
         db.execute('INSERT INTO audit(ts,order_id,action) VALUES(?,?,?)',(now,oid,'reserved'))
         db.commit()
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return jsonify(error='Um ou mais números acabaram de ser reservados por outra pessoa. Atualizamos a disponibilidade; confira sua seleção.',unavailable=nums),409
     finally:db.close()
     return jsonify(order_id=oid,token=token,expires_at=now+RESERVATION_SECONDS,numbers=nums,amount=len(nums)*20,pix_key=PIX_KEY,pix_name=PIX_NAME,whatsapp=WHATSAPP),201
 
