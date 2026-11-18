@@ -326,7 +326,7 @@ def admin():
     now = int(time.time())
     with conn() as db:
         cleanup(db, now)
-        orders = db.execute('SELECT * FROM orders ORDER BY created_at DESC').fetchall()
+        orders = db.execute('''SELECT id,token,name,phone,numbers,amount,status,created_at,expires_at,receipt_file,receipt_type,receipt_original,confirmed_at FROM orders ORDER BY created_at DESC''').fetchall()
         paid_row = db.execute(
             "SELECT COALESCE(SUM(amount),0) AS total FROM orders WHERE status='paid'"
         ).fetchone()
