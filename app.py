@@ -187,10 +187,11 @@ def create_order():
                 (oid, token, name, phone, ','.join(map(str, nums)), len(nums)*2000,
                  'reserved', now, now + RESERVATION_SECONDS)
             )
-            db.executemany(
-                'INSERT INTO numbers(number,order_id) VALUES(%s,%s)',
-                [(n, oid) for n in nums]
-            )
+            for number in nums:
+                db.execute(
+                    'INSERT INTO numbers(number,order_id) VALUES(%s,%s)',
+                    (number, oid)
+                )
             db.execute(
                 'INSERT INTO audit(ts,order_id,action) VALUES(%s,%s,%s)',
                 (now, oid, 'reserved')
