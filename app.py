@@ -50,9 +50,11 @@ def initialize():
                 receipt_type TEXT,
                 receipt_original TEXT,
                 receipt_data BYTEA,
-                confirmed_at BIGINT
+                confirmed_at BIGINT,
+                checked_in_at BIGINT
             )
         """)
+        db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS checked_in_at BIGINT")
         db.execute("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)")
         db.execute("""
             CREATE TABLE IF NOT EXISTS numbers (
@@ -326,7 +328,7 @@ def admin():
     now = int(time.time())
     with conn() as db:
         cleanup(db, now)
-        orders = db.execute('''SELECT id,token,name,phone,numbers,amount,status,created_at,expires_at,receipt_file,receipt_type,receipt_original,confirmed_at FROM orders ORDER BY created_at DESC''').fetchall()
+        orders = db.execute('''SELECT id,token,name,phone,numbers,amount,status,created_at,expires_at,receipt_file,receipt_type,receipt_original,confirmed_at,checked_in_at FROM orders ORDER BY created_at DESC''').fetchall()
         paid_row = db.execute(
             "SELECT COALESCE(SUM(amount),0) AS total FROM orders WHERE status='paid'"
         ).fetchone()
@@ -385,6 +387,21 @@ def update_order(oid, action):
         )
     return redirect(url_for('admin'))
 
+
+
+@app.post('/admin/orders/<oid>/checkin')
+@admin_only
+def checkin_order(oid):
+    verify_csrf()
+    now = int(time.time())
+    with conn() as db:
+        row = db.execute('SELECT status,checked_in_at FROM orders WHERE id=%s', (oid,)).fetchone()
+        if not row or row['status'] not in ('reserved', 'review', 'paid'):
+            return redirect(url_for('admin'))
+        if not row['checked_in_at']:
+            db.execute('UPDATE orders SET checked_in_at=%s WHERE id=%s', (now, oid))
+            db.execute('INSERT INTO audit(ts,order_id,action) VALUES(%s,%s,%s)', (now, oid, 'checkin'))
+    return redirect(url_for('admin'))
 
 if __name__ == '__main__':
     app.run(debug=False)
