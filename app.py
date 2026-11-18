@@ -55,6 +55,7 @@ def initialize():
             )
         """)
         db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS checked_in_at BIGINT")
+        db.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS hidden_at BIGINT")
         db.execute("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)")
         db.execute("""
             CREATE TABLE IF NOT EXISTS numbers (
@@ -373,7 +374,7 @@ def admin():
     now = int(time.time())
     with conn() as db:
         cleanup(db, now)
-        orders = db.execute('''SELECT id,token,name,phone,numbers,amount,status,created_at,expires_at,receipt_file,receipt_type,receipt_original,confirmed_at,checked_in_at FROM orders ORDER BY created_at DESC''').fetchall()
+        orders = db.execute('''SELECT id,token,name,phone,numbers,amount,status,created_at,expires_at,receipt_file,receipt_type,receipt_original,confirmed_at,checked_in_at FROM orders WHERE hidden_at IS NULL ORDER BY created_at DESC''').fetchall()
         paid_row = db.execute(
             "SELECT COALESCE(SUM(amount),0) AS total FROM orders WHERE status='paid'"
         ).fetchone()
@@ -432,6 +433,22 @@ def update_order(oid, action):
         )
     return redirect(url_for('admin'))
 
+
+@app.post('/admin/orders/<oid>/remove')
+@admin_only
+def remove_order(oid):
+    verify_csrf()
+    now = int(time.time())
+    with conn() as db:
+        db.execute('LOCK TABLE orders IN SHARE ROW EXCLUSIVE MODE')
+        row = db.execute('SELECT status,hidden_at FROM orders WHERE id=%s', (oid,)).fetchone()
+        if not row or row['hidden_at'] is not None or row['status'] == 'paid':
+            return redirect(url_for('admin'))
+        # Remove apenas da listagem: preserva pedido e auditoria. Libera números não pagos.
+        db.execute('DELETE FROM numbers WHERE order_id=%s', (oid,))
+        db.execute("UPDATE orders SET status='cancelled',hidden_at=%s WHERE id=%s", (now, oid))
+        db.execute('INSERT INTO audit(ts,order_id,action) VALUES(%s,%s,%s)', (now, oid, 'admin_removed'))
+    return redirect(url_for('admin'))
 
 
 @app.post('/admin/orders/<oid>/checkin')
