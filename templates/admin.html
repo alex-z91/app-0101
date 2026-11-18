@@ -1,1 +1,100 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin — Rifa Solidária Riandro</title><link rel="stylesheet" href="/static/style.css"><style>.wrap{max-width:1240px;margin:0 auto;padding:30px 20px}table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden;font-size:12px}th,td{text-align:left;padding:13px;border-bottom:1px solid #e1edf0;vertical-align:top}th{background:#e5f5f5;font-weight:800}td form{display:inline-block;margin:3px}.adminbtn{border:0;padding:8px 10px;background:#0bbcaf;border-radius:6px;color:#003547;font-weight:700}.adminbtn.red{background:#f8e0df;color:#a33}.status{font-weight:700}.scroll{overflow-x:auto}header{display:flex;align-items:center;justify-content:space-between;margin-bottom:25px}code{font-size:11px}</style></head><body><div class="wrap"><header><div><span class="section-kicker">PAINEL ADMINISTRATIVO</span><h1 style="font-size:32px;margin:8px 0">Conferência da campanha</h1></div><form method="post" action="/admin/logout" class="js-csrf"><button class="adminbtn red">Sair</button></form></header><div class="progress-card" style="margin-bottom:25px"><div><small>Arrecadação confirmada</small><strong>{{ 'R$ %.2f'|format(paid)|replace('.', ',') }}</strong></div><div><strong>{{orders|length}}</strong><small>solicitações registradas</small></div></div><div class="scroll"><table><thead><tr><th>Protocolo</th><th>Participante</th><th>Números</th><th>Valor</th><th>Status</th><th>Comprovante</th><th>Check-in</th><th>Ação</th></tr></thead><tbody>{% for o in orders %}<tr><td><code>{{o.id[:12]|upper}}</code><br><small>{{o.created_at|int}}</small></td><td>{{o.name|e}}<br><small>{{o.phone|e}}</small></td><td>{{o.numbers}}</td><td>{{ 'R$ %.2f'|format(o.amount/100)|replace('.', ',') }}</td><td><span class="status">{{ {'reserved':'Reservado','review':'A conferir','paid':'Confirmado','expired':'Expirado','cancelled':'Cancelado'}.get(o.status,o.status) }}</span></td><td>{% if o.receipt_file %}<a style="color:#078d9e;text-decoration:underline" href="/admin/receipts/{{o.id}}">Baixar comprovante</a>{% else %}—{% endif %}</td><td>{% if o.checked_in_at %}<span class="status">✓ Registrado</span><br><small>{{o.checked_in_at|int}}</small>{% elif o.status in ['reserved','review','paid'] %}<form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/checkin"><button class="adminbtn">Registrar check-in</button></form>{% else %}—{% endif %}</td><td>{% if o.status in ['reserved','review'] %}<form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/paid"><button class="adminbtn" onclick="return confirm('Pagamento realmente conferido?')">Confirmar</button></form><form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/cancelled"><button class="adminbtn red" onclick="return confirm('Cancelar e liberar os números?')">Cancelar</button></form>{% else %}—{% endif %}</td></tr>{% else %}<tr><td colspan="8">Ainda não há solicitações.</td></tr>{% endfor %}</tbody></table></div><p style="font-size:12px;color:#718894;margin-top:18px">Arquivos protegidos: o público não consegue acessar os comprovantes. Registros expirados não são apagados do histórico.</p></div><script>for(const f of document.querySelectorAll('.js-csrf'))f.addEventListener('submit',()=>{});for(const f of document.querySelectorAll('.js-csrf')){const i=document.createElement('input');i.type='hidden';i.name='csrf';i.value='{{csrf}}';f.append(i);} </script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel — Rifa Solidária</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+:root{--adm-ink:#103448;--adm-muted:#718894;--adm-line:#e1ebef;--adm-bg:#f3f7f8}
+body{background:var(--adm-bg);color:var(--adm-ink)}
+.admin-wrap{max-width:1180px;margin:0 auto;padding:clamp(16px,3vw,32px)}
+.admin-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+.admin-head h1{font-size:clamp(23px,4vw,32px);margin:7px 0 0;letter-spacing:-.04em}
+.admin-head .section-kicker{font-size:10px;letter-spacing:.12em}
+.admin-btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 13px;border:0;border-radius:9px;background:#dff6f3;color:#08776f;font:700 12px Inter,sans-serif;text-decoration:none;cursor:pointer}
+.admin-btn.red{background:#fff0ef;color:#a43d39}.admin-btn.dark{background:#103d52;color:white}
+.admin-btn:active{transform:scale(.98)}
+.admin-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.admin-stat{background:#fff;border:1px solid var(--adm-line);border-radius:15px;padding:17px 19px}
+.admin-stat small{display:block;color:var(--adm-muted);font-size:11px;font-weight:600}
+.admin-stat strong{display:block;margin-top:7px;font-size:clamp(21px,3vw,27px);letter-spacing:-.04em}
+.admin-list{display:grid;gap:12px}
+.order-card{background:#fff;border:1px solid var(--adm-line);border-radius:15px;padding:17px;box-shadow:0 4px 16px #123b4b08}
+.order-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:13px}
+.order-person{min-width:0}.order-person strong{display:block;font-size:15px;overflow-wrap:anywhere}.order-person small{display:block;color:var(--adm-muted);font-size:11px;margin-top:4px}
+.order-status{flex:none;padding:6px 9px;border-radius:999px;background:#edf4f6;color:#45616e;font-size:10px;font-weight:800}
+.order-status.paid{background:#e4f7ed;color:#167345}.order-status.review{background:#fff5dc;color:#8a6510}.order-status.cancelled,.order-status.expired{background:#f1f2f3;color:#65747b}
+.order-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px 0;border-top:1px solid var(--adm-line);border-bottom:1px solid var(--adm-line)}
+.order-meta span{display:block;color:var(--adm-muted);font-size:10px}.order-meta b{display:block;margin-top:4px;font-size:13px;overflow-wrap:anywhere}
+.order-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}
+.order-actions form{margin:0}.order-actions .admin-btn{min-height:42px}
+.order-proof{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:11px;font-size:12px}
+.order-proof a{color:#078d9e;font-weight:700}
+.admin-empty{background:#fff;border:1px dashed #cbdde3;border-radius:15px;padding:35px 18px;text-align:center;color:var(--adm-muted);font-size:13px}
+.admin-note{font-size:11px;color:var(--adm-muted);line-height:1.6;margin:18px 2px}
+@media(max-width:600px){
+ .admin-wrap{padding:16px 12px 28px}
+ .admin-head{align-items:flex-start;margin-bottom:16px}
+ .admin-head h1{font-size:23px;line-height:1.15}
+ .admin-head .admin-btn{min-height:42px;padding:0 12px}
+ .admin-summary{gap:8px;margin-bottom:13px}
+ .admin-stat{padding:13px;border-radius:12px}
+ .order-card{padding:14px;border-radius:13px}
+ .order-top{gap:8px}
+ .order-person strong{font-size:14px}
+ .order-meta{grid-template-columns:1fr 1fr;gap:12px}
+ .order-actions{display:grid;grid-template-columns:1fr 1fr}
+ .order-actions form{display:flex}
+ .order-actions .admin-btn{width:100%;min-height:46px;padding:8px 7px;font-size:11px}
+}
+</style>
+</head>
+<body>
+<main class="admin-wrap">
+<header class="admin-head">
+ <div><span class="section-kicker">PAINEL ADMINISTRATIVO</span><h1>Conferência da campanha</h1></div>
+ <form method="post" action="/admin/logout" class="js-csrf"><button class="admin-btn red" type="submit">Sair</button></form>
+</header>
+<section class="admin-summary">
+ <div class="admin-stat"><small>Arrecadação confirmada</small><strong>{{ 'R$ %.2f'|format(paid)|replace('.', ',') }}</strong></div>
+ <div class="admin-stat"><small>Solicitações visíveis</small><strong>{{orders|length}}</strong></div>
+</section>
+<section class="admin-list">
+{% for o in orders %}
+<article class="order-card">
+ <div class="order-top">
+  <div class="order-person"><strong>{{o.name|e}}</strong><small>{{o.phone|e}} · {{o.id[:12]|upper}}</small></div>
+  <span class="order-status {{o.status}}">{{ {'reserved':'Reservado','review':'A conferir','paid':'Confirmado','expired':'Expirado','cancelled':'Cancelado'}.get(o.status,o.status) }}</span>
+ </div>
+ <div class="order-meta">
+  <div><span>Números</span><b>{{o.numbers}}</b></div>
+  <div><span>Valor</span><b>{{ 'R$ %.2f'|format(o.amount/100)|replace('.', ',') }}</b></div>
+  <div><span>Data do pedido</span><b>{{o.created_at|int}}</b></div>
+ </div>
+ <div class="order-proof">
+  {% if o.receipt_file %}<a href="/admin/receipts/{{o.id}}">Baixar comprovante ↗</a>{% else %}<span style="color:#82949c">Sem comprovante enviado</span>{% endif %}
+  {% if o.checked_in_at %}<span style="color:#167345;font-weight:700">✓ Check-in registrado</span>{% endif %}
+ </div>
+ <div class="order-actions">
+  {% if o.status in ['reserved','review'] %}
+   <form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/paid"><button class="admin-btn" type="submit" onclick="return confirm('Pagamento realmente conferido?')">Confirmar pagamento</button></form>
+   <form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/cancelled"><button class="admin-btn red" type="submit" onclick="return confirm('Cancelar e liberar os números?')">Cancelar reserva</button></form>
+  {% endif %}
+  {% if o.status in ['reserved','review','paid'] and not o.checked_in_at %}
+   <form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/checkin"><button class="admin-btn dark" type="submit">Registrar check-in</button></form>
+  {% endif %}
+  {% if o.status != 'paid' %}
+   <form class="js-csrf" method="post" action="/admin/orders/{{o.id}}/remove"><button class="admin-btn red" type="submit" onclick="return confirm('Remover este pedido da lista? Se ainda ocupar números, eles serão liberados. O histórico de auditoria será preservado.')">Remover</button></form>
+  {% endif %}
+ </div>
+</article>
+{% else %}
+<div class="admin-empty">Ainda não há solicitações registradas.</div>
+{% endfor %}
+</section>
+<p class="admin-note">Comprovantes são privados. Remover oculta o pedido da lista, preserva a auditoria e libera os números quando o pagamento ainda não foi confirmado. Pedidos pagos não podem ser removidos.</p>
+</main>
+<script>
+for(const f of document.querySelectorAll('.js-csrf')){const i=document.createElement('input');i.type='hidden';i.name='csrf';i.value='{{csrf}}';f.append(i);}
+</script>
+</body></html>
